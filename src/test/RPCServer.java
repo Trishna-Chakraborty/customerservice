@@ -7,13 +7,9 @@ public class RPCServer {
 
     private static final String RPC_QUEUE_NAME = "customer";
 
-    private static int fib(int n) {
-        if (n == 0) return 0;
-        if (n == 1) return 1;
-        return fib(n - 1) + fib(n - 2);
-    }
 
-    public static void main(String[] argv) throws Exception {
+
+    public static void main(String[] args) throws Exception {
         ConnectionFactory factory = new ConnectionFactory();
         factory.setHost("localhost");
 
@@ -39,8 +35,9 @@ public class RPCServer {
                     String message = new String(delivery.getBody(), "UTF-8");
                     int n = Integer.parseInt(message);
 
-                    System.out.println(" [.] fib(" + message + ")");
-                    response += fib(n);
+                    System.out.println("Got message " + message);
+                    if(n< 200) response= String.valueOf(true);
+                    else  response=String.valueOf(false);
                 } catch (RuntimeException e) {
                     System.out.println(" [.] " + e.toString());
                 } finally {

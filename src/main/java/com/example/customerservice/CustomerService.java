@@ -5,6 +5,10 @@ import com.rabbitmq.client.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
 @Service
 public class CustomerService {
 
@@ -12,8 +16,9 @@ public class CustomerService {
     CustomerRepository customerRepository;
 
 
-    public  double addBalance(Double money){
+    public  double deductBalance(Double money){
         Customer customer=new Customer();
+        customer.setId(UUID.randomUUID());
         customer.setBalance(money);
         customerRepository.save(customer);
         return money;
@@ -27,7 +32,19 @@ public class CustomerService {
         factory.setHost("localhost");
         Connection connection=factory.newConnection();
         Channel channel=connection.createChannel();
-        channel.queueDeclare(name, false, false, false, null);
+        //channel.queueDeclare(name, false, false, false, null);
+        channel.exchangeDeclare("dead_exchange", "direct");
+        channel.queueDeclare("dead_queue", false, false, false, null);
+        channel.queueBind("dead_queue", "dead_exchange", "");
+
+
+        Map<String, Object> args = new HashMap<String, Object>();
+        args.put("x-dead-letter-exchange", "dead_exchange");
+        args.put("x-message-ttl", 60000);
+        channel.queueDeclare(name, false, false, false, args);
+        channel.exchangeDeclare(name+"_exchange", "direct");;
+        channel.queueBind(name, name+"_exchange", "");
+
         channel.basicQos(1);
         System.out.println(" [x] Awaiting RPC requests from " + name);
 
@@ -44,7 +61,7 @@ public class CustomerService {
                 String message = new String(delivery.getBody(), "UTF-8");
 
                 System.out.println("Got message from " + name +" : " + message);
-                response= String.valueOf(addBalance(Double.parseDouble(message)));
+                response= String.valueOf(deductBalance(Double.parseDouble(message)));
 
             } catch (Exception e) {
                 System.out.println(" [.] " + e.toString());
